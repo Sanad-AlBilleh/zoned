@@ -136,17 +136,26 @@ export default function OnboardingPage() {
     setStep((s) => Math.max(s - 1, 1));
   };
 
+  const [saveError, setSaveError] = useState<string | null>(null);
+
   const handleComplete = async () => {
     if (!canProceed()) return;
     setSaving(true);
+    setSaveError(null);
     try {
       const supabase = createClient();
       const {
         data: { user },
+        error: authError,
       } = await supabase.auth.getUser();
-      if (!user) return;
 
-      await supabase.from('profiles').upsert({
+      if (authError || !user) {
+        setSaveError(authError?.message ?? 'Not authenticated. Please sign in again.');
+        setSaving(false);
+        return;
+      }
+
+      const { error: upsertError } = await supabase.from('profiles').upsert({
         id: user.id,
         name: formData.name,
         coach_persona: formData.coach_persona,
@@ -163,10 +172,17 @@ export default function OnboardingPage() {
         updated_at: new Date().toISOString(),
       });
 
+      if (upsertError) {
+        setSaveError(`Failed to save profile: ${upsertError.message}`);
+        setSaving(false);
+        return;
+      }
+
       router.push(
         `/session?task=${encodeURIComponent(formData.task_description)}`,
       );
-    } catch {
+    } catch (err) {
+      setSaveError(err instanceof Error ? err.message : 'Something went wrong');
       setSaving(false);
     }
   };
@@ -227,6 +243,12 @@ export default function OnboardingPage() {
           </motion.div>
         </AnimatePresence>
       </div>
+
+      {saveError && (
+        <div className="mt-4 w-full max-w-lg rounded-lg border border-destructive/50 bg-destructive/10 px-4 py-3 text-sm text-destructive">
+          {saveError}
+        </div>
+      )}
 
       {/* Navigation */}
       <div className="mt-8 flex items-center gap-4">
