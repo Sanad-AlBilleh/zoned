@@ -1,6 +1,8 @@
 import { redirect } from 'next/navigation';
 import Link from 'next/link';
 import { createClient } from '@/lib/supabase/server';
+
+export const dynamic = 'force-dynamic';
 import type { Session } from '@/lib/types';
 import BrainMascot from '@/components/BrainMascot';
 import ScoreCard from '@/components/dashboard/ScoreCard';
